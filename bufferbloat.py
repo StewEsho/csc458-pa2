@@ -80,7 +80,10 @@ class BBTopo(Topo):
         # interface names will change from s0-eth1 to newname-eth1.
         switch = self.addSwitch('s0')
 
-        # TODO: Add links with appropriate characteristics
+        # TODO:
+        self.addLink(hosts[0], switch, bw=int(args.bw_net ), delay="{}ms".format(args.delay), max_queue_size=int(args.maxq))
+        self.addLink(hosts[1], switch, bw=int(args.bw_host), delay="{}ms".format(args.delay), max_queue_size=int(args.maxq))
+
 
 # Simple wrappers around monitoring utilities.  You are welcome to
 # contribute neatly written (using classes) monitoring scripts for
@@ -111,6 +114,8 @@ def start_iperf(net):
     server = h2.popen("iperf -s -w 16m")
     # TODO: Start the iperf client on h1.  Ensure that you create a
     # long lived TCP flow. You may need to redirect iperf's stdout to avoid blocking.
+    h1 = net.get('h1');
+    h1_flow = h1.popen("iperf -c {}".format(h2.IP()))
 
 def start_webserver(net):
     h1 = net.get('h1')
@@ -119,7 +124,7 @@ def start_webserver(net):
     return [proc]
 
 def start_ping(net):
-    # TODO: Start a ping train from h1 to h2 (or h2 to h1, does it
+    # Start a ping train from h1 to h2 (or h2 to h1, does it
     # matter?)  Measure RTTs every 0.1 second.  Read the ping man page
     # to see how to do this.
 
@@ -131,6 +136,8 @@ def start_ping(net):
     # redirecting stdout
     h1 = net.get('h1')
     popen = h1.popen("echo '' > %s/ping.txt"%(args.dir), shell=True)
+    h1.popen("ping h2 -i 0.1 > %s/ping.txt"%(args.dir), shell=True)
+
 
 def bufferbloat():
     if not os.path.exists(args.dir):
@@ -159,18 +166,18 @@ def bufferbloat():
     # Depending on the order you add links to your network, this
     # number may be 1 or 2.  Ensure you use the correct number.
     #
-    # qmon = start_qmon(iface='s0-eth2',
-    #                  outfile='%s/q.txt' % (args.dir))
-    qmon = None
+    qmon = start_qmon(iface='s0-eth2',
+                     outfile='%s/q.txt' % (args.dir))
+    # qmon = None
 
     # TODO: Start iperf, webservers, etc.
-    # start_iperf(net)
+    start_iperf(net)
 
     # Hint: The command below invokes a CLI which you can use to
     # debug.  It allows you to run arbitrary commands inside your
     # emulated hosts h1 and h2.
     #
-    # CLI(net)
+    CLI(net)
 
     # TODO: measure the time it takes to complete webpage transfer
     # from h1 to h2 (say) 3 times.  Hint: check what the following

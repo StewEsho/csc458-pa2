@@ -1,3 +1,4 @@
-bb-q20/
+bb-q*/*
+bb-q*
 .vscode/
 *.pyc
