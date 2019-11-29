@@ -81,7 +81,7 @@ class BBTopo(Topo):
         switch = self.addSwitch('s0')
 
         # The total RTT will be 4*args.delay. So setting args.delay to 1 will result in a RTT of 4ms
-        self.addLink(hosts[0], switch, bw=int(args.bw_host), delay="{}ms".format(args.delay), max_queue_size=int(args.maxq))
+        self.addLink(hosts[0], switch, bw=int(args.bw_host), delay="{}ms".format(args.delay))
         self.addLink(hosts[1], switch, bw=int(args.bw_net ), delay="{}ms".format(args.delay), max_queue_size=int(args.maxq))
 
 
@@ -112,10 +112,11 @@ def start_iperf(net):
     # that the TCP flow is not receiver window limited.  If it is,
     # there is a chance that the router buffer may not get filled up.
     server = h2.popen("iperf -s -w 16m")
-    # TODO: Start the iperf client on h1.  Ensure that you create a
+    # Start the iperf client on h1.  Ensure that you create a
     # long lived TCP flow. You may need to redirect iperf's stdout to avoid blocking.
     h1 = net.get('h1');
-    h1_flow = h1.popen("iperf -c {} -i 0.5 -t 120 > /dev/null".format(h2.IP()))
+    # We run the TCP flow for 5 seconds longer than the experiment time, to ensure the flow doesn't end prematurely
+    h1_flow = h1.popen("iperf -c {} -i 0.5 -t {} > /dev/null".format(h2.IP(), int(args.time)+5))
 
 def start_webserver(net):
     h1 = net.get('h1')
@@ -136,10 +137,11 @@ def start_ping(net):
     # redirecting stdout
     h1 = net.get('h1')
     h2 = net.get('h2')
-    popen = h1.popen("echo '' > %s/ping.txt"%(args.dir), shell=True)    # Clears out file before appending data
-    popen.wait()
+    # popen = h1.popen("echo '' > %s/ping.txt"%(args.dir), shell=True)    # Clears out file before appending data
+    # popen.wait()
 
     popen = h1.popen("sudo ping {} -i 0.1 >> {}/ping.txt".format(h2.IP(), args.dir), shell=True)
+
 
 def curl_server(net):
     h1 = net.get('h1')
@@ -152,21 +154,28 @@ def curl_server(net):
     experiment_count = 3
     start_time = time()
     print('Starting web server on h1. curl-ing web page from h2')
+    
+    curl_times = list()
     while True:
+        curl_times.append(list())
         for i in range(experiment_count):
             # do the measurement (say) 3 times.
-            popen = h2.popen("curl -o /dev/null -s -w %{time_total} " + str(h1.IP()) + " >> %s/curl.txt"%(args.dir), shell=True)
-            popen.wait()
-            h2.popen("echo ' ' >> %s/curl.txt"%(args.dir), shell=True)
-
-        h2.popen("echo -e '\n' >> %s/curl.txt"%(args.dir), shell=True)
-        sleep(5)
+            popen = h2.popen("curl -o /dev/null -s -w %{time_total} " + str(h1.IP()) + "/http/index.html", shell=True, stdout=PIPE)
+            curl_times[-1].append(float(popen.communicate()[0]))
 
         now = time()
         delta = now - start_time
         if delta > int(args.time):
             break
         print("%.1fs left..." % (int(args.time) - delta))
+
+        sleep(5)
+    return curl_times
+
+
+def calculate_curl_average():
+    # This assums args.dir/curl.txt exists
+    pass
 
 
 def bufferbloat():
