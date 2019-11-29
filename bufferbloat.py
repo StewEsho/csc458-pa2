@@ -80,9 +80,9 @@ class BBTopo(Topo):
         # interface names will change from s0-eth1 to newname-eth1.
         switch = self.addSwitch('s0')
 
-        # TODO:
-        self.addLink(hosts[0], switch, bw=int(args.bw_net ), delay="{}ms".format(args.delay), max_queue_size=int(args.maxq))
-        self.addLink(hosts[1], switch, bw=int(args.bw_host), delay="{}ms".format(args.delay), max_queue_size=int(args.maxq))
+        # The total RTT will be 4*args.delay. So setting args.delay to 1 will result in a RTT of 4ms
+        self.addLink(hosts[0], switch, bw=int(args.bw_host), delay="{}ms".format(args.delay), max_queue_size=int(args.maxq))
+        self.addLink(hosts[1], switch, bw=int(args.bw_net ), delay="{}ms".format(args.delay), max_queue_size=int(args.maxq))
 
 
 # Simple wrappers around monitoring utilities.  You are welcome to
@@ -115,7 +115,7 @@ def start_iperf(net):
     # TODO: Start the iperf client on h1.  Ensure that you create a
     # long lived TCP flow. You may need to redirect iperf's stdout to avoid blocking.
     h1 = net.get('h1');
-    h1_flow = h1.popen("iperf -c {}".format(h2.IP()))
+    h1_flow = h1.popen("iperf -c {} -i 0.5 -t 120 > /dev/null".format(h2.IP()))
 
 def start_webserver(net):
     h1 = net.get('h1')
@@ -124,7 +124,6 @@ def start_webserver(net):
     return [proc]
 
 def start_ping(net):
-    # TODO:
     # Start a ping train from h1 to h2 (or h2 to h1, does it
     # matter?)  Measure RTTs every 0.1 second.  Read the ping man page
     # to see how to do this.
@@ -137,34 +136,37 @@ def start_ping(net):
     # redirecting stdout
     h1 = net.get('h1')
     h2 = net.get('h2')
-    popen = h1.popen("echo '' > %s/ping.txt"%(args.dir), shell=True)
-    h1.popen("ping {} -i 0.1 > {}/ping.txt".format(h2.IP(), args.dir), shell=True)
+    popen = h1.popen("echo '' > %s/ping.txt"%(args.dir), shell=True)    # Clears out file before appending data
+    popen.wait()
+
+    popen = h1.popen("sudo ping {} -i 0.1 >> {}/ping.txt".format(h2.IP(), args.dir), shell=True)
 
 def curl_server(net):
     h1 = net.get('h1')
     h2 = net.get('h2')
 
     #spawn web server on h1
+    start_webserver(net)
+    h2.popen("echo '' > %s/curl.txt"%(args.dir), shell=True)  # Clears out file before appending data
 
     experiment_count = 3
-    count = 0
-
     start_time = time()
+    print('Starting web server on h1. curl-ing web page from h2')
     while True:
-        # do the measurement (say) 3 times.
-        h1.popen("curl -o /dev/null -s -w %{time_total} " + str(h2.IP()), shell=True)
-        count = count + 1
+        for i in range(experiment_count):
+            # do the measurement (say) 3 times.
+            popen = h2.popen("curl -o /dev/null -s -w %{time_total} " + str(h1.IP()) + " >> %s/curl.txt"%(args.dir), shell=True)
+            popen.wait()
+            h2.popen("echo ' ' >> %s/curl.txt"%(args.dir), shell=True)
 
-        sleep(1)
+        h2.popen("echo -e '\n' >> %s/curl.txt"%(args.dir), shell=True)
+        sleep(5)
+
         now = time()
         delta = now - start_time
         if delta > int(args.time):
             break
         print("%.1fs left..." % (int(args.time) - delta))
-
-        if (count >= 3):
-            break
-        print("{} measurements left...".format(3-count))
 
 
 def bufferbloat():
@@ -178,9 +180,12 @@ def bufferbloat():
     topo = BBTopo()
     net = Mininet(topo=topo, host=CPULimitedHost, link=TCLink)
     net.start()
+    print(net.get('h1').IP())
+
     # This dumps the topology and how nodes are interconnected through
     # links.
     dumpNodeConnections(net.hosts)
+    
     # This performs a basic all pairs ping test.
     net.pingAll()
 
@@ -194,8 +199,7 @@ def bufferbloat():
     # Depending on the order you add links to your network, this
     # number may be 1 or 2.  Ensure you use the correct number.
     #
-    qmon = start_qmon(iface='s0-eth2',
-                     outfile='%s/q.txt' % (args.dir))
+    qmon = start_qmon(iface='s0-eth2', outfile='%s/q.txt' % (args.dir))
     # qmon = None
 
     # TODO: Start iperf, webservers, etc.
@@ -223,7 +227,7 @@ def bufferbloat():
     #     if delta > args.time:
     #         break
     #     print "%.1fs left..." % (args.time - delta)
-    # curl_server(net)
+    curl_server(net)
 
     # TODO: compute average (and standard deviation) of the fetch
     # times.  You don't need to plot them.  Just note it in your
@@ -238,4 +242,5 @@ def bufferbloat():
     Popen("pgrep -f webserver.py | xargs kill -9", shell=True).wait()
 
 if __name__ == "__main__":
+    print("--CURRENT QUEUE SIZE: " + str(args.maxq))
     bufferbloat()
