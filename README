@@ -3,6 +3,12 @@ Stew Esho
 1003937127
 
 =========================
+Run Command
+=========================
+To run this experiment, simply enter the following command (when terminal is in the root directory of this project):
+    sudo ./run.sh
+
+=========================
 Average HTTP Fetch Times:
 =========================
 
@@ -33,6 +39,22 @@ Q2)
     With a clear rate of 100Mb/s, the queue could potentially take 0.12s (120ms) to completely clear out.
 
 Q3)
+    The RTT seems to vary almost linearly with respect to the queue size.
+    When looking at the graphs for RTT and queue size, they increase and decrease at roughly the same intervals, and even the shapes of the graphs look extremely similar to the naked eye.
+    If we look at the scales, we notice that if the queue size is 100, then the RTT is ~250ms. When the queue size is 20, the RTT is ~60ms.
+    Meanwhile, when the queue size is near 0, the RTT remains between 4ms and 10ms.
+
+    Based on this accquired data, we can (roughly) get the following symbolic equation:
+            RTT = (2.5 * Q)ms/packet + 10ms
+    where Q is the queue size measured in units of packets.
 
 Q4)
-    An obvious solution to mitigate 
+    An obvious solution to mitigate bufferbloat would be to decrease the maximum size of the router's queue.
+    Thus, outgoing traffic does not have to wait in as long of a queue before leaving the network,
+    but this will in turn cause more packets to be dropped and the queue will fill up quicker.
+
+    Alternatively, we can look at the typical cause of bufferbloat, which is sending massive amounts of data all at once causing the queue to fill up fast.
+    If we were to prevent applications from filling up the queue, we could avoid bufferbloat. 
+    By capping the amount of data any application may use, we can limit the outgoing traffic to match our outgoing bandwith and thus avoid filling up the queue.
+    Furthermore, if we use a priority queue we can allow high-traffic applications (for example, video streaming) to use more of the bandwith, reserving the queue for less resource-intesive applications (for example, fetching a web page).
+    This also ensures that the queue will not fill up as quickly, thus reducing queueing delays and avoiding bufferbloat.
