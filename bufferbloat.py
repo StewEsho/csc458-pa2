@@ -118,7 +118,7 @@ def start_iperf(net):
     # long lived TCP flow. You may need to redirect iperf's stdout to avoid blocking.
     h1 = net.get('h1');
     # We run the TCP flow for 5 seconds longer than the experiment time, to ensure the flow doesn't end prematurely
-    h1_flow = h1.popen("iperf -c {} -i 0.5 -t {} > /dev/null".format(h2.IP(), int(args.time)+5))
+    h1_flow = h1.popen("iperf -c {} -t {} > /dev/null".format(h2.IP(), int(args.time)+5))
 
 def start_webserver(net):
     h1 = net.get('h1')
@@ -142,7 +142,7 @@ def start_ping(net):
     # popen = h1.popen("echo '' > %s/ping.txt"%(args.dir), shell=True)    # Clears out file before appending data
     # popen.wait()
 
-    popen = h1.popen("sudo ping {} -i 0.1 >> {}/ping.txt".format(h2.IP(), args.dir), shell=True)
+    popen = h1.popen("sudo ping {} -i 0.1 > {}/ping.txt".format(h2.IP(), args.dir), shell=True)
 
 
 def curl_server(net):

@@ -1,0 +1,38 @@
+CSC458 - Programming Assignment 2
+Stew Esho
+1003937127
+
+=========================
+Average HTTP Fetch Times:
+=========================
+
+QUEUE SIZE    |   20    |   100   |
+--------------+---------+---------+
+AVERAGE TIME  | 0.5268s | 1.2346s |
+--------------+---------+---------+
+STD DEVIATION | 0.1801s | 0.7086s |
+
+
+
+=========================
+ASSIGNMENT QUESTIONS
+=========================
+
+Q1)
+    When the queue size increases, so to does the time it takes to fetch a web page.
+    This is because new packet sent must wait at the END of the queue for all the packets ahead of it to be delivered.
+    A larger queue size means this packet may potentially need to wait for a greater amount of packets ahead of it.
+    As well, the larger queue size means the queue will hit its limit later, meaning TCP Reno will reduce cwnd less often, 
+    thus causing the switch's queue to stay congested for longer periods of time (compared to if the max queue size was smaller).
+
+    An analogy for this behaviour is waiting behind a longer line at a grocery store, which would increase the amount of time needed to checkout.
+
+Q2)
+    The VM's maximum transmit queue length (txqueuelen) is 1000 packets, with a maximum transmission unit of 1500 bytes.
+    Thus, a fully maxed out queue can potentially store 1,500,000 bytes, or 12 megabits. 
+    With a clear rate of 100Mb/s, the queue could potentially take 0.12s (120ms) to completely clear out.
+
+Q3)
+
+Q4)
+    An obvious solution to mitigate 

@@ -6,7 +6,7 @@ set -e
 
 time=60
 bwnet=10
-# TODO: If you want the RTT to be 4ms what should the delay on each
+# If you want the RTT to be 4ms what should the delay on each
 # link be?  Set this value correctly.
 delay=1
 
@@ -21,7 +21,7 @@ for qsize in 20 100; do
 
     python bufferbloat.py --dir=$dir --time=$time --bw-net=$bwnet --delay=$delay --maxq=$qsize
 
-    # TODO: Ensure the input file names match the ones you use in
+    # Ensure the input file names match the ones you use in
     # bufferbloat.py script.  Also ensure the plot file names match
     # the required naming convsention when submitting your tarball.
     python plot_tcpprobe.py -f $dir/cwnd.txt -o $dir/cwnd-iperf.png -p $iperf_port
