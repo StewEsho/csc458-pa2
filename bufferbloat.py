@@ -18,6 +18,8 @@ from argparse import ArgumentParser
 from monitor import monitor_qlen
 import termcolor as T
 
+from helper import avg, stdev  # For curl times
+
 import sys
 import os
 import math
@@ -157,25 +159,21 @@ def curl_server(net):
     
     curl_times = list()
     while True:
-        curl_times.append(list())
-        for i in range(experiment_count):
-            # do the measurement (say) 3 times.
-            popen = h2.popen("curl -o /dev/null -s -w %{time_total} " + str(h1.IP()) + "/http/index.html", shell=True, stdout=PIPE)
-            curl_times[-1].append(float(popen.communicate()[0]))
-
         now = time()
         delta = now - start_time
         if delta > int(args.time):
             break
         print("%.1fs left..." % (int(args.time) - delta))
 
+        for i in range(experiment_count):
+            # do the measurement (say) 3 times.
+            popen = h2.popen("curl -o /dev/null -s -w %{time_total} " + str(h1.IP()) + "/http/index.html", shell=True, stdout=PIPE)
+            curl_times.append(float(popen.communicate()[0]))
+
         sleep(5)
-    return curl_times
-
-
-def calculate_curl_average():
-    # This assums args.dir/curl.txt exists
-    pass
+    print("Fetching Completed")
+    print("Average Fetch Time: {}".format(avg(curl_times)))
+    print("Std Dev Fetch Time: {}".format(stdev(curl_times)))
 
 
 def bufferbloat():
@@ -202,7 +200,7 @@ def bufferbloat():
     start_tcpprobe("cwnd.txt")
     start_ping(net)
 
-    # TODO: Start monitoring the queue sizes.  Since the switch I
+    # Start monitoring the queue sizes.  Since the switch I
     # created is "s0", I monitor one of the interfaces.  Which
     # interface?  The interface numbering starts with 1 and increases.
     # Depending on the order you add links to your network, this
@@ -211,7 +209,7 @@ def bufferbloat():
     qmon = start_qmon(iface='s0-eth2', outfile='%s/q.txt' % (args.dir))
     # qmon = None
 
-    # TODO: Start iperf, webservers, etc.
+    # Start iperf, webservers, etc.
     start_iperf(net)
 
     # Hint: The command below invokes a CLI which you can use to
@@ -220,7 +218,7 @@ def bufferbloat():
     #
     # CLI(net)
 
-    # TODO: measure the time it takes to complete webpage transfer
+    # measure the time it takes to complete webpage transfer
     # from h1 to h2 (say) 3 times.  Hint: check what the following
     # command does: curl -o /dev/null -s -w %{time_total} google.com
     # Now use the curl command to fetch webpage from the webserver you
@@ -238,7 +236,7 @@ def bufferbloat():
     #     print "%.1fs left..." % (args.time - delta)
     curl_server(net)
 
-    # TODO: compute average (and standard deviation) of the fetch
+    # compute average (and standard deviation) of the fetch
     # times.  You don't need to plot them.  Just note it in your
     # README and explain.
 
